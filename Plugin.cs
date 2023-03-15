@@ -44,6 +44,18 @@ namespace TootTally.CustomCursor
                 TrailType = config.Bind(CONFIG_FIELD, nameof(option.TrailType), DEFAULT_TRAIL),
             };
 
+            string targetThemePath = Path.Combine(Paths.BepInExRootPath, "CustomCursors");
+            if (!Directory.Exists(targetThemePath))
+            {
+                string sourceThemePath = Path.Combine(Path.GetDirectoryName(Plugin.Instance.Info.Location), "CustomCursors");
+                LogInfo("CustomCursors folder not found. Attempting to move folder from " + sourceThemePath + " to " + targetThemePath);
+                if (Directory.Exists(sourceThemePath))
+                    Directory.Move(sourceThemePath, targetThemePath);
+                else
+                    LogError("Source CustomCursors Folder Not Found. Cannot Create CustomCursors Folder. Download the module again to fix the issue.");
+                return;
+            }
+
             CustomCursor.LoadCursorTexture();
             Harmony.CreateAndPatchAll(typeof(CustomCursorPatch), PluginInfo.PLUGIN_GUID);
             LogInfo($"Module loaded!");
