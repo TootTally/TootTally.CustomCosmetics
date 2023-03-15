@@ -19,7 +19,7 @@ namespace TootTally.CustomCursor
         public static string CURSORFOLDER_PATH = "CustomCursors/";
         public Options option;
         public ConfigEntry<bool> ModuleConfigEnabled { get; set; }
-        public bool IsConfigInitialized { get ; set; }
+        public bool IsConfigInitialized { get; set; }
         public string Name { get => PluginInfo.PLUGIN_NAME; set => Name = value; }
         public void LogInfo(string msg) => Logger.LogInfo(msg);
         public void LogError(string msg) => Logger.LogError(msg);
@@ -52,8 +52,11 @@ namespace TootTally.CustomCursor
                 if (Directory.Exists(sourceFolderPath))
                     Directory.Move(sourceFolderPath, targetFolderPath);
                 else
+                {
                     LogError("Source CustomCursors Folder Not Found. Cannot Create CustomCursors Folder. Download the module again to fix the issue.");
-                return;
+                    return;
+                }
+
             }
 
             CustomCursor.LoadCursorTexture();
