@@ -55,7 +55,7 @@ namespace TootTally.CustomCursor
             if (!webRequest.isNetworkError && !webRequest.isHttpError)
                 callback(DownloadHandlerTexture.GetContent(webRequest));
             else
-                TootTally.Plugin.LogInfo("Cursor does not exist or have the wrong format");
+                Plugin.Instance.LogInfo("Cursor does not exist or have the wrong format");
         }
 
         public static void ApplyCustomTextureToCursor(GameController __instance)
@@ -63,7 +63,7 @@ namespace TootTally.CustomCursor
             if (!AreAllTexturesLoaded()) return;
 
 
-            TootTally.Plugin.LogInfo("Custom Cursor Loaded, Applying textures to cursor");
+            Plugin.Instance.LogInfo("Custom Cursor Loaded, Applying textures to cursor");
             GameObject noteTarget = GameObject.Find(NOTETARGET_PATH).gameObject;
             GameObject noteDot = GameObject.Find(NOTEDOT_PATH).gameObject;
             GameObject noteDotGlow = GameObject.Find(NOTEDOTGLOW_PATH).gameObject;

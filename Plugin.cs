@@ -21,6 +21,8 @@ namespace TootTally.CustomCursor
         public ConfigEntry<bool> ModuleConfigEnabled { get; set; }
         public bool IsConfigInitialized { get ; set; }
         public string Name { get => PluginInfo.PLUGIN_NAME; set => Name = value; }
+        public void LogInfo(string msg) => Logger.LogInfo(msg);
+        public void LogError(string msg) => Logger.LogError(msg);
 
         private void Awake()
         {
@@ -44,13 +46,13 @@ namespace TootTally.CustomCursor
 
             CustomCursor.LoadCursorTexture();
             Harmony.CreateAndPatchAll(typeof(CustomCursorPatch), PluginInfo.PLUGIN_GUID);
-            TootTally.Plugin.LogInfo($"Module {PluginInfo.PLUGIN_GUID} is loaded!");
+            LogInfo($"Module loaded!");
         }
 
         public void UnloadModule()
         {
             Harmony.UnpatchID(PluginInfo.PLUGIN_GUID);
-            TootTally.Plugin.LogInfo($"Module {PluginInfo.PLUGIN_GUID} is unloaded!");
+            LogInfo($"Module unloaded!");
         }
 
         public static class CustomCursorPatch
