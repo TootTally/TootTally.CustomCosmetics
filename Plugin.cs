@@ -44,13 +44,13 @@ namespace TootTally.CustomCursor
                 TrailType = config.Bind(CONFIG_FIELD, nameof(option.TrailType), DEFAULT_TRAIL),
             };
 
-            string targetThemePath = Path.Combine(Paths.BepInExRootPath, "CustomCursors");
-            if (!Directory.Exists(targetThemePath))
+            string targetFolderPath = Path.Combine(Paths.BepInExRootPath, "CustomCursors");
+            if (!Directory.Exists(targetFolderPath))
             {
-                string sourceThemePath = Path.Combine(Path.GetDirectoryName(Plugin.Instance.Info.Location), "CustomCursors");
-                LogInfo("CustomCursors folder not found. Attempting to move folder from " + sourceThemePath + " to " + targetThemePath);
-                if (Directory.Exists(sourceThemePath))
-                    Directory.Move(sourceThemePath, targetThemePath);
+                string sourceFolderPath = Path.Combine(Path.GetDirectoryName(Plugin.Instance.Info.Location), "CustomCursors");
+                LogInfo("CustomCursors folder not found. Attempting to move folder from " + sourceFolderPath + " to " + targetFolderPath);
+                if (Directory.Exists(sourceFolderPath))
+                    Directory.Move(sourceFolderPath, targetFolderPath);
                 else
                     LogError("Source CustomCursors Folder Not Found. Cannot Create CustomCursors Folder. Download the module again to fix the issue.");
                 return;
