@@ -2,7 +2,9 @@
 using BepInEx.Configuration;
 using HarmonyLib;
 using System.IO;
+using System.Runtime.CompilerServices;
 using TootTally.Utils;
+using TrombSettings;
 
 namespace TootTally.CustomCursor
 {
@@ -14,11 +16,13 @@ namespace TootTally.CustomCursor
         private const string CONFIG_NAME = "CustomCursor.cfg";
         private const string CONFIG_FIELD = "CursorName";
         private const string DEFAULT_CURSORNAME = "TEMPLATE";
+        private const string SETTINGS_PAGE_NAME = "CustomCursor";
         private const TrailType DEFAULT_TRAIL = TrailType.None;
 
         public static string CURSORFOLDER_PATH = "CustomCursors/";
         public Options option;
         public ConfigEntry<bool> ModuleConfigEnabled { get; set; }
+        public ConfigEntry<string> CursorName { get; set; }
         public bool IsConfigInitialized { get; set; }
         public string Name { get => PluginInfo.PLUGIN_NAME; set => Name = value; }
         public void LogInfo(string msg) => Logger.LogInfo(msg);
@@ -56,7 +60,15 @@ namespace TootTally.CustomCursor
                     LogError("Source CustomCursors Folder Not Found. Cannot Create CustomCursors Folder. Download the module again to fix the issue.");
                     return;
                 }
+            }
 
+            if (Directory.Exists(targetFolderPath))
+            {
+                var files = Directory.EnumerateDirectories(targetFolderPath);
+                var settingPage = OptionalTrombSettings.GetConfigPage(SETTINGS_PAGE_NAME);
+                foreach (string f in files)
+                    CursorName.SetSerializedValue(f);
+                OptionalTrombSettings.Add(settingPage, CursorName);
             }
 
             CustomCursor.LoadCursorTexture();
