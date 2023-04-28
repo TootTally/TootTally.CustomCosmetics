@@ -1,5 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Logging;
 using HarmonyLib;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -26,6 +27,9 @@ namespace TootTally.CustomCursor
         public ConfigEntry<string> CursorName { get; set; }
         public bool IsConfigInitialized { get; set; }
         public string Name { get => PluginInfo.PLUGIN_NAME; set => Name = value; }
+
+        public ManualLogSource GetLogger => Logger;
+
         public void LogInfo(string msg) => Logger.LogInfo(msg);
         public void LogError(string msg) => Logger.LogError(msg);
 
