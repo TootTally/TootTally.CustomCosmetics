@@ -2,10 +2,13 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using TootTally.Utils;
-using TrombSettings;
+using TootTally.Utils.TootTallySettings;
 using UnityEngine.UIElements;
 
 namespace TootTally.CustomCursor
@@ -17,7 +20,7 @@ namespace TootTally.CustomCursor
 
         private const string CONFIG_NAME = "CustomCursor.cfg";
         private const string CONFIG_FIELD = "CursorName";
-        private const string DEFAULT_CURSORNAME = "TEMPLATE";
+        private const string DEFAULT_CURSORNAME = "Default";
         private const string SETTINGS_PAGE_NAME = "CustomCursor";
         private const TrailType DEFAULT_TRAIL = TrailType.None;
 
@@ -39,7 +42,6 @@ namespace TootTally.CustomCursor
             Instance = this;
 
             ModuleConfigEnabled = TootTally.Plugin.Instance.Config.Bind("Modules", "Custom Cursor", true, "Enable Custom Cursor Module");
-            OptionalTrombSettings.Add(TootTally.Plugin.Instance.moduleSettings, ModuleConfigEnabled);
             TootTally.Plugin.AddModule(this);
         }
 
@@ -51,7 +53,6 @@ namespace TootTally.CustomCursor
             {
                 CursorName = config.Bind(CONFIG_FIELD, nameof(option.CursorName), DEFAULT_CURSORNAME),
                 TrailType = config.Bind(CONFIG_FIELD, nameof(option.TrailType), DEFAULT_TRAIL),
-                PresetNames = config.Bind(CONFIG_FIELD, nameof(option.PresetNames), Presets.Default)
             };
 
             string targetFolderPath = Path.Combine(Paths.BepInExRootPath, "CustomCursors");
@@ -67,17 +68,17 @@ namespace TootTally.CustomCursor
                     return;
                 }
             }
-
-            /*if (Directory.Exists(targetFolderPath))
+            var settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cursor", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
+            var folderNames = new List<string>
             {
-                var files = Directory.EnumerateDirectories(targetFolderPath);
-                var settingPage = OptionalTrombSettings.GetConfigPage(SETTINGS_PAGE_NAME);
-                foreach (string f in files)
-                    CursorName.SetSerializedValue(f);
-                OptionalTrombSettings.Add(settingPage, CursorName);
-            }*/
-            var settingPage = OptionalTrombSettings.GetConfigPage(SETTINGS_PAGE_NAME);
-            OptionalTrombSettings.Add(settingPage, option.PresetNames);
+                DEFAULT_CURSORNAME
+            };
+            if (Directory.Exists(targetFolderPath))
+            {
+                var directories = Directory.GetDirectories(targetFolderPath);
+                directories.ToList().ForEach(d => folderNames.Add(Path.GetFileNameWithoutExtension(d)));
+            }
+            settingPage.AddDropdown("CustomCursorDropdown", option.CursorName, folderNames.ToArray());
 
             //Preload textures so you don't have to at the start of every songs
             Harmony.CreateAndPatchAll(typeof(CustomCursorPatch), PluginInfo.PLUGIN_GUID);
@@ -118,18 +119,12 @@ namespace TootTally.CustomCursor
 
         public static void ResolvePresets(GameController __instance)
         {
-            if ((!CustomCursor.AreAllTexturesLoaded() || __instance == null) && Instance.option.PresetNames.Value != Presets.Default)
-                if (Instance.option.PresetNames.Value == Presets.Custom)
-                {
-                    Plugin.Instance.LogInfo("[Custom] preset selected. Loading config file CursorName.");
-                    CustomCursor.LoadCursorTexture(__instance, Instance.option.CursorName.Value);
-                }
-                else
-                {
-                    Plugin.Instance.LogInfo($"[{Instance.option.PresetNames.Value.ToString()}] preset loaded.");
-                    CustomCursor.LoadCursorTexture(__instance, Instance.option.PresetNames.Value.ToString());
-                }
-            else if (Instance.option.PresetNames.Value != Presets.Default)
+            if ((!CustomCursor.AreAllTexturesLoaded() || __instance == null) && Instance.option.CursorName.Value != DEFAULT_CURSORNAME)
+            {
+                Plugin.Instance.LogInfo($"[{Instance.option.CursorName.Value}] preset loading...");
+                CustomCursor.LoadCursorTexture(__instance, Instance.option.CursorName.Value);
+            }
+            else if (Instance.option.CursorName.Value != DEFAULT_CURSORNAME)
                 CustomCursor.ApplyCustomTextureToCursor(__instance);
             else
                 Plugin.Instance.LogInfo("[Default] preset selected. Not loading any Custom Cursor.");
@@ -139,17 +134,8 @@ namespace TootTally.CustomCursor
         {
             public ConfigEntry<string> CursorName { get; set; }
             public ConfigEntry<TrailType> TrailType { get; set; }
-            public ConfigEntry<Presets> PresetNames { get; set; }
         }
 
-        public enum Presets
-        {
-            Default,
-            Custom,
-            ElectrostatsCursor50,
-            OsuBlue,
-            Star
-        }
         public enum TrailType
         {
             None = 0,
