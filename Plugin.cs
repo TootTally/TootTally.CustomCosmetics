@@ -20,7 +20,6 @@ namespace TootTally.CustomCursor
 
         private const string CONFIG_NAME = "CustomCursor.cfg";
         private const string CONFIG_FIELD = "CursorName";
-        private const string DEFAULT_CURSORNAME = "Default";
         private const string SETTINGS_PAGE_NAME = "CustomCursor";
         private const TrailType DEFAULT_TRAIL = TrailType.None;
 
@@ -30,7 +29,7 @@ namespace TootTally.CustomCursor
         public ConfigEntry<string> CursorName { get; set; }
         public bool IsConfigInitialized { get; set; }
         public string Name { get => PluginInfo.PLUGIN_NAME; set => Name = value; }
-
+        public static TootTallySettingPage settingPage;
         public ManualLogSource GetLogger => Logger;
 
         public void LogInfo(string msg) => Logger.LogInfo(msg);
@@ -68,11 +67,8 @@ namespace TootTally.CustomCursor
                     return;
                 }
             }
-            var settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cursor", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
-            var folderNames = new List<string>
-            {
-                DEFAULT_CURSORNAME
-            };
+            settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cursor", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
+            var folderNames = new List<string>();
             if (Directory.Exists(targetFolderPath))
             {
                 var directories = Directory.GetDirectories(targetFolderPath);
@@ -89,6 +85,7 @@ namespace TootTally.CustomCursor
         {
             CustomCursor.UnloadTextures();
             Harmony.UnpatchID(PluginInfo.PLUGIN_GUID);
+            settingPage.Remove();
             LogInfo($"Module unloaded!");
         }
 
