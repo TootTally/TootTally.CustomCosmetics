@@ -20,6 +20,7 @@ namespace TootTally.CustomCursor
 
         private const string CONFIG_NAME = "CustomCursor.cfg";
         private const string CONFIG_FIELD = "CursorName";
+        private const string DEFAULT_CURSORNAME = "Default";
         private const string SETTINGS_PAGE_NAME = "CustomCursor";
         private const TrailType DEFAULT_TRAIL = TrailType.None;
 
@@ -68,7 +69,10 @@ namespace TootTally.CustomCursor
                 }
             }
             settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cursor", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
-            var folderNames = new List<string>();
+            var folderNames = new List<string>
+            {
+                DEFAULT_CURSORNAME
+            };
             if (Directory.Exists(targetFolderPath))
             {
                 var directories = Directory.GetDirectories(targetFolderPath);
