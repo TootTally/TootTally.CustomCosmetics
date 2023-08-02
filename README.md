@@ -1,2 +1,2 @@
-# TootTally.CustomCursor
-Custom Cursor Module for TootTally
+# TootTally.CustomCosmetics
+Custom Cosmetics Module for TootTally
