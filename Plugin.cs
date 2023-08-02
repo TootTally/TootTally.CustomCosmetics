@@ -3,28 +3,28 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using TootTally.Utils;
 using TootTally.Utils.TootTallySettings;
-using UnityEngine.UIElements;
 
-namespace TootTally.CustomCursor
+namespace TootTally.CustomCosmetics
 {
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin, ITootTallyModule
     {
         public static Plugin Instance;
 
-        private const string CONFIG_NAME = "CustomCursor.cfg";
-        private const string CONFIG_FIELD = "CursorName";
-        private const string DEFAULT_CURSORNAME = "Default";
-        private const string SETTINGS_PAGE_NAME = "CustomCursor";
+        private const string CONFIG_NAME = "CustomCosmetics.cfg";
+        private const string CURSOR_CONFIG_FIELD = "CustomCursor";
+        private const string NOTE_CONFIG_FIELD = "CustomCursor";
+        public const string DEFAULT_CURSORNAME = "Default";
+        public const string DEFAULT_NOTENAME = "Default";
+        private const string SETTINGS_PAGE_NAME = "CustomCosmetics";
         private const TrailType DEFAULT_TRAIL = TrailType.None;
 
-        public static string CURSORFOLDER_PATH = "CustomCursors/";
+        public static string CURSORS_FOLDER_PATH = "CustomCursors";
+        public static string NOTES_FOLDER_PATH = "CustomNotes";
         public Options option;
         public ConfigEntry<bool> ModuleConfigEnabled { get; set; }
         public ConfigEntry<string> CursorName { get; set; }
@@ -51,43 +51,60 @@ namespace TootTally.CustomCursor
             ConfigFile config = new ConfigFile(configPath + CONFIG_NAME, true);
             option = new Options()
             {
-                CursorName = config.Bind(CONFIG_FIELD, nameof(option.CursorName), DEFAULT_CURSORNAME),
-                TrailType = config.Bind(CONFIG_FIELD, nameof(option.TrailType), DEFAULT_TRAIL),
+                CursorName = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.CursorName), DEFAULT_CURSORNAME),
+                TrailType = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailType), DEFAULT_TRAIL),
+                NoteName = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteName), DEFAULT_NOTENAME)
             };
 
-            string targetFolderPath = Path.Combine(Paths.BepInExRootPath, "CustomCursors");
+            settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cosmetics", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
+
+
+            TryMigrateFolder("CustomCursors");
+            TryMigrateFolder("CustomNotes");
+
+            CreateDropdownFromFolder(CURSORS_FOLDER_PATH, option.CursorName, DEFAULT_CURSORNAME);
+            CreateDropdownFromFolder(NOTES_FOLDER_PATH, option.NoteName, DEFAULT_NOTENAME);
+
+            //Preload textures so you don't have to at the start of every songs
+            Harmony.CreateAndPatchAll(typeof(CustomCursorPatch), PluginInfo.PLUGIN_GUID);
+            Harmony.CreateAndPatchAll(typeof(CustomNotePatch), PluginInfo.PLUGIN_GUID);
+            LogInfo($"Module loaded!");
+        }
+
+        public void TryMigrateFolder(string folderName)
+        {
+            string targetFolderPath = Path.Combine(Paths.BepInExRootPath, folderName);
             if (!Directory.Exists(targetFolderPath))
             {
-                string sourceFolderPath = Path.Combine(Path.GetDirectoryName(Plugin.Instance.Info.Location), "CustomCursors");
-                LogInfo("CustomCursors folder not found. Attempting to move folder from " + sourceFolderPath + " to " + targetFolderPath);
+                string sourceFolderPath = Path.Combine(Path.GetDirectoryName(Plugin.Instance.Info.Location), folderName);
+                LogInfo($"{folderName} folder not found. Attempting to move folder from " + sourceFolderPath + " to " + targetFolderPath);
                 if (Directory.Exists(sourceFolderPath))
                     Directory.Move(sourceFolderPath, targetFolderPath);
                 else
                 {
-                    LogError("Source CustomCursors Folder Not Found. Cannot Create CustomCursors Folder. Download the module again to fix the issue.");
+                    LogError($"Source {folderName} Folder Not Found. Cannot Create {folderName} Folder. Download the module again to fix the issue.");
                     return;
                 }
             }
-            settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cursor", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
-            var folderNames = new List<string>
+        }
+
+        public void CreateDropdownFromFolder(string folderName, ConfigEntry<string> config, string defaultValue)
+        {
+            var folderNames = new List<string> { defaultValue };
+            var folderPath = Path.Combine(Paths.BepInExRootPath, folderName);
+            if (Directory.Exists(folderPath))
             {
-                DEFAULT_CURSORNAME
-            };
-            if (Directory.Exists(targetFolderPath))
-            {
-                var directories = Directory.GetDirectories(targetFolderPath);
+                var directories = Directory.GetDirectories(folderPath);
                 directories.ToList().ForEach(d => folderNames.Add(Path.GetFileNameWithoutExtension(d)));
             }
-            settingPage.AddDropdown("CustomCursorDropdown", option.CursorName, folderNames.ToArray());
-
-            //Preload textures so you don't have to at the start of every songs
-            Harmony.CreateAndPatchAll(typeof(CustomCursorPatch), PluginInfo.PLUGIN_GUID);
-            LogInfo($"Module loaded!");
+            settingPage.AddLabel(folderName, folderName, 24, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.BottomLeft);
+            settingPage.AddDropdown($"{folderName}Dropdown", config, folderNames.ToArray());
         }
 
         public void UnloadModule()
         {
             CustomCursor.UnloadTextures();
+            CustomNote.UnloadTextures();
             Harmony.UnpatchID(PluginInfo.PLUGIN_GUID);
             settingPage.Remove();
             LogInfo($"Module unloaded!");
@@ -99,14 +116,21 @@ namespace TootTally.CustomCursor
             [HarmonyPostfix]
             public static void OnSettingsChange()
             {
-                ResolvePresets(null);
+               CustomCursor.ResolvePresets(null);
+            }
+
+            [HarmonyPatch(typeof(HomeController), nameof(HomeController.Start))]
+            [HarmonyPostfix]
+            public static void OnHomeStartLoadTexture()
+            {
+                CustomCursor.ResolvePresets(null);
             }
 
             [HarmonyPatch(typeof(GameController), nameof(GameController.Start))]
             [HarmonyPostfix]
             public static void PatchCustorTexture(GameController __instance)
             {
-                ResolvePresets(__instance);
+                CustomCursor.ResolvePresets(__instance);
             }
 
             [HarmonyPatch(typeof(GameController), nameof(GameController.Update))]
@@ -118,23 +142,36 @@ namespace TootTally.CustomCursor
 
         }
 
-        public static void ResolvePresets(GameController __instance)
+        public static class CustomNotePatch
         {
-            if ((!CustomCursor.AreAllTexturesLoaded() || __instance == null) && Instance.option.CursorName.Value != DEFAULT_CURSORNAME)
+            [HarmonyPatch(typeof(HomeController), nameof(HomeController.tryToSaveSettings))]
+            [HarmonyPostfix]
+            public static void OnSettingsChange()
             {
-                Plugin.Instance.LogInfo($"[{Instance.option.CursorName.Value}] preset loading...");
-                CustomCursor.LoadCursorTexture(__instance, Instance.option.CursorName.Value);
+                CustomNote.ResolvePresets(null);
             }
-            else if (Instance.option.CursorName.Value != DEFAULT_CURSORNAME)
-                CustomCursor.ApplyCustomTextureToCursor(__instance);
-            else
-                Plugin.Instance.LogInfo("[Default] preset selected. Not loading any Custom Cursor.");
+
+            [HarmonyPatch(typeof(HomeController), nameof(HomeController.Start))]
+            [HarmonyPostfix]
+            public static void OnHomeStartLoadTexture()
+            {
+                CustomNote.ResolvePresets(null);
+            }
+
+            [HarmonyPatch(typeof(GameController), nameof(GameController.Start))]
+            [HarmonyPostfix]
+            public static void PatchCustorTexture(GameController __instance)
+            {
+                CustomNote.ResolvePresets(__instance);
+            }
         }
 
         public class Options
         {
             public ConfigEntry<string> CursorName { get; set; }
             public ConfigEntry<TrailType> TrailType { get; set; }
+
+            public ConfigEntry<string> NoteName { get; set; }
         }
 
         public enum TrailType

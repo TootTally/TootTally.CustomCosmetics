@@ -2,12 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
-namespace TootTally.CustomCursor
+namespace TootTally.CustomCosmetics
 {
     public static class CustomCursor
     {
@@ -25,7 +24,7 @@ namespace TootTally.CustomCursor
             //If textures are already set, skip
             if (AreAllTexturesLoaded() && !ConfigCursorNameChanged()) return;
 
-            string folderPath = Path.Combine(Paths.BepInExRootPath, Plugin.CURSORFOLDER_PATH, CursorName);
+            string folderPath = Path.Combine(Paths.BepInExRootPath, Plugin.CURSORS_FOLDER_PATH, CursorName);
 
             //Dont know which will request will finish first...
             Plugin.Instance.StartCoroutine(LoadCursorTexture(folderPath + "/TargetNote.png", texture =>
@@ -109,6 +108,19 @@ namespace TootTally.CustomCursor
             noteDotGlow.GetComponent<RectTransform>().sizeDelta = new Vector2(_noteDotGlowTexture.width, _noteDotGlowTexture.height) / 2;
             noteDotGlow1.GetComponent<Image>().sprite = Sprite.Create(_noteDotGlow1Texture, new Rect(0, 0, _noteDotGlow1Texture.width, _noteDotGlow1Texture.height), Vector2.zero);
             noteDotGlow1.GetComponent<RectTransform>().sizeDelta = new Vector2(_noteDotGlow1Texture.width, _noteDotGlow1Texture.height) / 2;
+        }
+
+        public static void ResolvePresets(GameController __instance)
+        {
+            if ((!CustomCursor.AreAllTexturesLoaded() || __instance == null) && Plugin.Instance.option.CursorName.Value != Plugin.DEFAULT_CURSORNAME)
+            {
+                Plugin.Instance.LogInfo($"[{Plugin.Instance.option.CursorName.Value}] preset loading...");
+                CustomCursor.LoadCursorTexture(__instance, Plugin.Instance.option.CursorName.Value);
+            }
+            else if (Plugin.Instance.option.CursorName.Value != Plugin.DEFAULT_CURSORNAME)
+                CustomCursor.ApplyCustomTextureToCursor(__instance);
+            else
+                Plugin.Instance.LogInfo("[Default] preset selected. Not loading any Custom Cursor.");
         }
 
         public static void UpdateCursor()
