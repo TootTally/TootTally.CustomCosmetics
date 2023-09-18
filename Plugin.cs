@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using TootTally.Utils;
 using TootTally.Utils.TootTallySettings;
+using UnityEngine;
 
 namespace TootTally.CustomCosmetics
 {
@@ -53,7 +54,13 @@ namespace TootTally.CustomCosmetics
             {
                 CursorName = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.CursorName), DEFAULT_CURSORNAME),
                 TrailType = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailType), DEFAULT_TRAIL),
-                NoteName = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteName), DEFAULT_NOTENAME)
+                NoteName = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteName), DEFAULT_NOTENAME),
+                NoteHeadSize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteHeadSize), 1f),
+                NoteBodySize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteBodySize), 1f),
+                OverwriteNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.OverwriteNoteColor), false),
+                NoteColorStart = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorStart), Color.white),
+                NoteColorEnd = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorEnd), Color.black),
+
             };
 
             settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cosmetics", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
@@ -65,10 +72,41 @@ namespace TootTally.CustomCosmetics
             CreateDropdownFromFolder(CURSORS_FOLDER_PATH, option.CursorName, DEFAULT_CURSORNAME);
             CreateDropdownFromFolder(NOTES_FOLDER_PATH, option.NoteName, DEFAULT_NOTENAME);
 
+            var headSlider = settingPage.AddSlider("NoteHeadSizeSlider", 0f, 5f, 250f, "Note Head Size", option.NoteHeadSize, false);
+            var bodySlider = settingPage.AddSlider("NoteBodySizeSlider", 0f, 5f, 250f, "Note Body Size", option.NoteBodySize, false);
+
+            settingPage.AddButton("ResetSliders", new Vector2(160, 80), "Reset", () =>
+            {
+                headSlider.slider.value = 1f;
+                bodySlider.slider.value = 1f;
+            });
+
+            settingPage.AddToggle("OverwriteNoteColor", option.OverwriteNoteColor, OnToggleValueChange);
+            if (option.OverwriteNoteColor.Value) OnToggleValueChange(true);
+
             //Preload textures so you don't have to at the start of every songs
             Harmony.CreateAndPatchAll(typeof(CustomCursorPatch), PluginInfo.PLUGIN_GUID);
             Harmony.CreateAndPatchAll(typeof(CustomNotePatch), PluginInfo.PLUGIN_GUID);
             LogInfo($"Module loaded!");
+        }
+
+        public void OnToggleValueChange(bool value)
+        {
+            if (value)
+            {
+                settingPage.AddLabel("Note Start Color");
+                settingPage.AddColorSliders("NoteStart", "Note Start Color", option.NoteColorStart);
+                settingPage.AddLabel("Note End Color");
+                settingPage.AddColorSliders("NoteEnd", "Note End Color", option.NoteColorEnd);
+            }
+            else
+            {
+                settingPage.RemoveSettingObjectFromList("Note Start Color");
+                settingPage.RemoveSettingObjectFromList("NoteStart");
+                settingPage.RemoveSettingObjectFromList("Note End Color");
+                settingPage.RemoveSettingObjectFromList("NoteEnd");
+            }
+
         }
 
         public void TryMigrateFolder(string folderName)
@@ -116,7 +154,7 @@ namespace TootTally.CustomCosmetics
             [HarmonyPostfix]
             public static void OnSettingsChange()
             {
-               CustomCursor.ResolvePresets(null);
+                CustomCursor.ResolvePresets(null);
             }
 
             [HarmonyPatch(typeof(HomeController), nameof(HomeController.Start))]
@@ -158,11 +196,29 @@ namespace TootTally.CustomCosmetics
                 CustomNote.ResolvePresets(null);
             }
 
-            [HarmonyPatch(typeof(GameController), nameof(GameController.Start))]
-            [HarmonyPostfix]
+            [HarmonyPatch(typeof(GameController), nameof(GameController.buildNotes))]
+            [HarmonyPrefix]
             public static void PatchCustorTexture(GameController __instance)
             {
                 CustomNote.ResolvePresets(__instance);
+                CustomNote.ApplyNoteResize(__instance);
+            }
+
+            [HarmonyPatch(typeof(NoteDesigner), nameof(NoteDesigner.setColorScheme))]
+            [HarmonyPrefix]
+            public static bool OverwriteSetColorScheme(NoteDesigner __instance)
+            {
+                if (!Instance.option.OverwriteNoteColor.Value) return true;
+                CustomNote.ApplyColor(__instance);
+
+                return false;
+            }
+
+            [HarmonyPatch(typeof(GameController), nameof(GameController.buildNotes))]
+            [HarmonyPostfix]
+            public static void FixEndNotePosition(GameController __instance)
+            {
+                CustomNote.FixNoteEndPosition(__instance);
             }
         }
 
@@ -172,6 +228,11 @@ namespace TootTally.CustomCosmetics
             public ConfigEntry<TrailType> TrailType { get; set; }
 
             public ConfigEntry<string> NoteName { get; set; }
+            public ConfigEntry<float> NoteHeadSize { get; set; }
+            public ConfigEntry<float> NoteBodySize { get; set; }
+            public ConfigEntry<bool> OverwriteNoteColor { get; set; }
+            public ConfigEntry<Color> NoteColorStart { get; set; }
+            public ConfigEntry<Color> NoteColorEnd { get; set; }
         }
 
         public enum TrailType

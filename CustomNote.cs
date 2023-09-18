@@ -5,6 +5,7 @@ using System.IO;
 using UnityEngine.Networking;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Drawing;
 
 namespace TootTally.CustomCosmetics
 {
@@ -108,6 +109,55 @@ namespace TootTally.CustomCosmetics
             design.startdot.sprite = _noteStartInTexture;
             design.enddot.sprite = _noteEndInTexture;
 
+        }
+
+        //Yoink from Token: 0x06000482 RID: 1154 RVA: 0x0003F088 File Offset: 0x0003D288
+        public static void ApplyColor(NoteDesigner __instance)
+        {
+            __instance.g = new Gradient();
+            __instance.gck = new GradientColorKey[2];
+            __instance.gak = new GradientAlphaKey[2];
+            __instance.gak[0].alpha = 1f;
+            __instance.gak[0].time = 0f;
+            __instance.gak[1].alpha = 1f;
+            __instance.gak[1].time = 1f;
+            __instance.gck[0].time = 0.4f;
+            __instance.gck[1].time = 0.6f;
+            Color32 c = Plugin.Instance.option.NoteColorStart.Value;
+            Color32 c2 = Plugin.Instance.option.NoteColorEnd.Value;
+            __instance.startdot.color = c;
+            __instance.gck[0].color = c;
+            __instance.enddot.color = c2;
+            __instance.gck[1].color = c2;
+            __instance.g.SetKeys(__instance.gck, __instance.gak);
+            __instance.colorline.colorGradient = __instance.g;
+        }
+
+        public static void ApplyNoteResize(GameController __instance)
+        {
+            var startRect = __instance.singlenote.transform.Find("StartPoint").GetComponent<RectTransform>();
+            var endRect = __instance.singlenote.transform.Find("EndPoint").GetComponent<RectTransform>();
+
+            startRect.sizeDelta = Plugin.Instance.option.NoteHeadSize.Value * Vector2.one * 40f;
+            endRect.sizeDelta = Plugin.Instance.option.NoteHeadSize.Value * Vector2.one * 40f;
+            startRect.pivot = endRect.pivot = Vector2.one / 2f;
+            startRect.anchoredPosition = Vector2.zero;
+
+            __instance.singlenote.transform.Find("StartPoint/StartPointColor").GetComponent<RectTransform>().sizeDelta = Plugin.Instance.option.NoteHeadSize.Value * Vector2.one * 16f;
+            __instance.singlenote.transform.Find("EndPoint/EndPointColor").GetComponent<RectTransform>().sizeDelta = Plugin.Instance.option.NoteHeadSize.Value * Vector2.one * 16f;
+
+            __instance.singlenote.transform.Find("Line").GetComponent<LineRenderer>().widthMultiplier = Plugin.Instance.option.NoteBodySize.Value * 7;
+            __instance.singlenote.transform.Find("OutlineLine").GetComponent<LineRenderer>().widthMultiplier = Plugin.Instance.option.NoteBodySize.Value * 12;
+        }
+
+        //The fact I have to do that is bullshit
+        public static void FixNoteEndPosition(GameController __instance)
+        {
+            foreach (GameObject note in __instance.allnotes)
+            {
+                var rect = note.transform.transform.Find("EndPoint").GetComponent<RectTransform>();
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x + 20f, rect.anchoredPosition.y);
+            }
         }
 
     }
