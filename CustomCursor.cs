@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,7 +17,6 @@ namespace TootTally.CustomCosmetics
         private const string NOTEDOTGLOW1_PATH = "GameplayCanvas/GameSpace/TargetNote/note-dot-glow/note-dot-glow (1)";
 
         private static Texture2D _noteTargetTexture, _noteDotTexture, _noteDotGlowTexture, _noteDotGlow1Texture;
-        private static RectTransform _targetNoteRectangle;
         private static string _lastCursorName;
 
         public static void LoadCursorTexture(GameController __instance, string CursorName)
@@ -59,10 +59,10 @@ namespace TootTally.CustomCosmetics
 
         public static void UnloadTextures()
         {
-            Texture2D.DestroyImmediate(_noteTargetTexture);
-            Texture2D.DestroyImmediate(_noteDotTexture);
-            Texture2D.DestroyImmediate(_noteDotGlowTexture);
-            Texture2D.DestroyImmediate(_noteDotGlow1Texture);
+            GameObject.DestroyImmediate(_noteTargetTexture);
+            GameObject.DestroyImmediate(_noteDotTexture);
+            GameObject.DestroyImmediate(_noteDotGlowTexture);
+            GameObject.DestroyImmediate(_noteDotGlow1Texture);
             Plugin.Instance.LogInfo("Custom Cursor Textures Destroyed.");
         }
 
@@ -98,35 +98,55 @@ namespace TootTally.CustomCosmetics
             GameObject noteDotGlow = GameObject.Find(NOTEDOTGLOW_PATH).gameObject;
             GameObject noteDotGlow1 = GameObject.Find(NOTEDOTGLOW1_PATH).gameObject;
 
-            _targetNoteRectangle = noteTarget.GetComponent<RectTransform>();
-
             noteTarget.GetComponent<Image>().sprite = Sprite.Create(_noteTargetTexture, new Rect(0, 0, _noteTargetTexture.width, _noteTargetTexture.height), Vector2.one);
-            _targetNoteRectangle.sizeDelta = new Vector2(_noteTargetTexture.width, _noteTargetTexture.height) / 2;
+            noteTarget.GetComponent<RectTransform>().sizeDelta = new Vector2(_noteTargetTexture.width, _noteTargetTexture.height) / 2;
             noteDot.GetComponent<Image>().sprite = Sprite.Create(_noteDotTexture, new Rect(0, 0, _noteDotTexture.width, _noteDotTexture.height), Vector2.zero);
             noteDot.GetComponent<RectTransform>().sizeDelta = new Vector2(_noteDotTexture.width, _noteDotTexture.height) / 2;
             noteDotGlow.GetComponent<Image>().sprite = Sprite.Create(_noteDotGlowTexture, new Rect(0, 0, _noteDotGlowTexture.width, _noteDotGlowTexture.height), Vector2.zero);
             noteDotGlow.GetComponent<RectTransform>().sizeDelta = new Vector2(_noteDotGlowTexture.width, _noteDotGlowTexture.height) / 2;
             noteDotGlow1.GetComponent<Image>().sprite = Sprite.Create(_noteDotGlow1Texture, new Rect(0, 0, _noteDotGlow1Texture.width, _noteDotGlow1Texture.height), Vector2.zero);
             noteDotGlow1.GetComponent<RectTransform>().sizeDelta = new Vector2(_noteDotGlow1Texture.width, _noteDotGlow1Texture.height) / 2;
+
+            __instance.dotsize = _noteTargetTexture.width / 2;
         }
 
         public static void ResolvePresets(GameController __instance)
         {
-            if ((!CustomCursor.AreAllTexturesLoaded() || __instance == null) && Plugin.Instance.option.CursorName.Value != Plugin.DEFAULT_CURSORNAME)
+            if ((!AreAllTexturesLoaded() || __instance == null) && Plugin.Instance.option.CursorName.Value != Plugin.DEFAULT_CURSORNAME)
             {
                 Plugin.Instance.LogInfo($"[{Plugin.Instance.option.CursorName.Value}] preset loading...");
-                CustomCursor.LoadCursorTexture(__instance, Plugin.Instance.option.CursorName.Value);
+                LoadCursorTexture(__instance, Plugin.Instance.option.CursorName.Value);
             }
             else if (Plugin.Instance.option.CursorName.Value != Plugin.DEFAULT_CURSORNAME)
-                CustomCursor.ApplyCustomTextureToCursor(__instance);
+                ApplyCustomTextureToCursor(__instance);
             else
                 Plugin.Instance.LogInfo("[Default] preset selected. Not loading any Custom Cursor.");
         }
 
-        public static void UpdateCursor()
+
+        public static class CustomCursorPatch
         {
-            if (_targetNoteRectangle != null)
-                _targetNoteRectangle.anchoredPosition = new Vector3((_targetNoteRectangle.sizeDelta.x / 60 * -30) + 60, _targetNoteRectangle.anchoredPosition.y);
+            [HarmonyPatch(typeof(HomeController), nameof(HomeController.tryToSaveSettings))]
+            [HarmonyPostfix]
+            public static void OnSettingsChange()
+            {
+                ResolvePresets(null);
+            }
+
+            [HarmonyPatch(typeof(HomeController), nameof(HomeController.Start))]
+            [HarmonyPostfix]
+            public static void OnHomeStartLoadTexture()
+            {
+                ResolvePresets(null);
+            }
+
+            [HarmonyPatch(typeof(GameController), nameof(GameController.Start))]
+            [HarmonyPostfix]
+            public static void PatchCustorTexture(GameController __instance)
+            {
+                ResolvePresets(__instance);
+            }
+
         }
 
     }

@@ -8,6 +8,7 @@ using System.Linq;
 using TootTally.Utils;
 using TootTally.Utils.TootTallySettings;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace TootTally.CustomCosmetics
 {
@@ -19,8 +20,10 @@ namespace TootTally.CustomCosmetics
         private const string CONFIG_NAME = "CustomCosmetics.cfg";
         private const string CURSOR_CONFIG_FIELD = "CustomCursor";
         private const string NOTE_CONFIG_FIELD = "CustomCursor";
+        private const string BONER_CONFIG_FIELD = "CustomBoner";
         public const string DEFAULT_CURSORNAME = "Default";
         public const string DEFAULT_NOTENAME = "Default";
+        public const string DEFAULT_BONER = "None";
         private const string SETTINGS_PAGE_NAME = "CustomCosmetics";
         private const TrailType DEFAULT_TRAIL = TrailType.None;
 
@@ -31,7 +34,7 @@ namespace TootTally.CustomCosmetics
         public ConfigEntry<string> CursorName { get; set; }
         public bool IsConfigInitialized { get; set; }
         public string Name { get => PluginInfo.PLUGIN_NAME; set => Name = value; }
-        public static TootTallySettingPage settingPage;
+        public static TootTallySettingPage SettingPage;
         public ManualLogSource GetLogger => Logger;
 
         public void LogInfo(string msg) => Logger.LogInfo(msg);
@@ -60,10 +63,11 @@ namespace TootTally.CustomCosmetics
                 OverwriteNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.OverwriteNoteColor), false),
                 NoteColorStart = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorStart), Color.white),
                 NoteColorEnd = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorEnd), Color.black),
+                BonerName = config.Bind(BONER_CONFIG_FIELD, nameof(option.BonerName), DEFAULT_BONER),
 
             };
 
-            settingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cosmetics", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
+            SettingPage = TootTallySettingsManager.AddNewPage(SETTINGS_PAGE_NAME, "Custom Cosmetics", 40, new UnityEngine.Color(.1f, .1f, .1f, .1f));
 
 
             TryMigrateFolder("CustomCursors");
@@ -72,21 +76,30 @@ namespace TootTally.CustomCosmetics
             CreateDropdownFromFolder(CURSORS_FOLDER_PATH, option.CursorName, DEFAULT_CURSORNAME);
             CreateDropdownFromFolder(NOTES_FOLDER_PATH, option.NoteName, DEFAULT_NOTENAME);
 
-            var headSlider = settingPage.AddSlider("NoteHeadSizeSlider", 0f, 5f, 250f, "Note Head Size", option.NoteHeadSize, false);
-            var bodySlider = settingPage.AddSlider("NoteBodySizeSlider", 0f, 5f, 250f, "Note Body Size", option.NoteBodySize, false);
+            var headSlider = SettingPage.AddSlider("NoteHeadSizeSlider", 0f, 5f, 250f, "Note Head Size", option.NoteHeadSize, false);
+            var bodySlider = SettingPage.AddSlider("NoteBodySizeSlider", 0f, 5f, 250f, "Note Body Size", option.NoteBodySize, false);
 
-            settingPage.AddButton("ResetSliders", new Vector2(160, 80), "Reset", () =>
+            SettingPage.AddButton("ResetSliders", new Vector2(160, 80), "Reset", () =>
             {
                 headSlider.slider.value = 1f;
                 bodySlider.slider.value = 1f;
             });
 
-            settingPage.AddToggle("OverwriteNoteColor", option.OverwriteNoteColor, OnToggleValueChange);
+            SettingPage.AddToggle("OverwriteNoteColor", option.OverwriteNoteColor, OnToggleValueChange);
             if (option.OverwriteNoteColor.Value) OnToggleValueChange(true);
 
+            SettingPage.AddLabel("BonerLabel", "Custom Tromboners", 24, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.BottomLeft);
+
+            CustomTromboner.LoadAssetBundles();
+            
+            List<string> folderNames = new() { Plugin.DEFAULT_BONER };
+            folderNames.AddRange(CustomTromboner.GetBonerNames);
+            SettingPage.AddDropdown($"BonerDropdown", option.BonerName, folderNames.ToArray());
+
             //Preload textures so you don't have to at the start of every songs
-            Harmony.CreateAndPatchAll(typeof(CustomCursorPatch), PluginInfo.PLUGIN_GUID);
-            Harmony.CreateAndPatchAll(typeof(CustomNotePatch), PluginInfo.PLUGIN_GUID);
+            Harmony.CreateAndPatchAll(typeof(CustomCursor.CustomCursorPatch), PluginInfo.PLUGIN_GUID);
+            Harmony.CreateAndPatchAll(typeof(CustomNote.CustomNotePatch), PluginInfo.PLUGIN_GUID);
+            Harmony.CreateAndPatchAll(typeof(CustomTromboner.CustomBonerPatch), PluginInfo.PLUGIN_GUID);
             LogInfo($"Module loaded!");
         }
 
@@ -94,17 +107,17 @@ namespace TootTally.CustomCosmetics
         {
             if (value)
             {
-                settingPage.AddLabel("Note Start Color");
-                settingPage.AddColorSliders("NoteStart", "Note Start Color", option.NoteColorStart);
-                settingPage.AddLabel("Note End Color");
-                settingPage.AddColorSliders("NoteEnd", "Note End Color", option.NoteColorEnd);
+                SettingPage.AddLabel("Note Start Color");
+                SettingPage.AddColorSliders("NoteStart", "Note Start Color", option.NoteColorStart);
+                SettingPage.AddLabel("Note End Color");
+                SettingPage.AddColorSliders("NoteEnd", "Note End Color", option.NoteColorEnd);
             }
             else
             {
-                settingPage.RemoveSettingObjectFromList("Note Start Color");
-                settingPage.RemoveSettingObjectFromList("NoteStart");
-                settingPage.RemoveSettingObjectFromList("Note End Color");
-                settingPage.RemoveSettingObjectFromList("NoteEnd");
+                SettingPage.RemoveSettingObjectFromList("Note Start Color");
+                SettingPage.RemoveSettingObjectFromList("NoteStart");
+                SettingPage.RemoveSettingObjectFromList("Note End Color");
+                SettingPage.RemoveSettingObjectFromList("NoteEnd");
             }
 
         }
@@ -135,8 +148,8 @@ namespace TootTally.CustomCosmetics
                 var directories = Directory.GetDirectories(folderPath);
                 directories.ToList().ForEach(d => folderNames.Add(Path.GetFileNameWithoutExtension(d)));
             }
-            settingPage.AddLabel(folderName, folderName, 24, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.BottomLeft);
-            settingPage.AddDropdown($"{folderName}Dropdown", config, folderNames.ToArray());
+            SettingPage.AddLabel(folderName, folderName, 24, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.BottomLeft);
+            SettingPage.AddDropdown($"{folderName}Dropdown", config, folderNames.ToArray());
         }
 
         public void UnloadModule()
@@ -144,83 +157,14 @@ namespace TootTally.CustomCosmetics
             CustomCursor.UnloadTextures();
             CustomNote.UnloadTextures();
             Harmony.UnpatchID(PluginInfo.PLUGIN_GUID);
-            settingPage.Remove();
+            SettingPage.Remove();
             LogInfo($"Module unloaded!");
         }
 
-        public static class CustomCursorPatch
-        {
-            [HarmonyPatch(typeof(HomeController), nameof(HomeController.tryToSaveSettings))]
-            [HarmonyPostfix]
-            public static void OnSettingsChange()
-            {
-                CustomCursor.ResolvePresets(null);
-            }
 
-            [HarmonyPatch(typeof(HomeController), nameof(HomeController.Start))]
-            [HarmonyPostfix]
-            public static void OnHomeStartLoadTexture()
-            {
-                CustomCursor.ResolvePresets(null);
-            }
 
-            [HarmonyPatch(typeof(GameController), nameof(GameController.Start))]
-            [HarmonyPostfix]
-            public static void PatchCustorTexture(GameController __instance)
-            {
-                CustomCursor.ResolvePresets(__instance);
-            }
 
-            [HarmonyPatch(typeof(GameController), nameof(GameController.Update))]
-            [HarmonyPostfix]
-            public static void PatchCursorPositionWhilePlaying()
-            {
-                CustomCursor.UpdateCursor();
-            }
 
-        }
-
-        public static class CustomNotePatch
-        {
-            [HarmonyPatch(typeof(HomeController), nameof(HomeController.tryToSaveSettings))]
-            [HarmonyPostfix]
-            public static void OnSettingsChange()
-            {
-                CustomNote.ResolvePresets(null);
-            }
-
-            [HarmonyPatch(typeof(HomeController), nameof(HomeController.Start))]
-            [HarmonyPostfix]
-            public static void OnHomeStartLoadTexture()
-            {
-                CustomNote.ResolvePresets(null);
-            }
-
-            [HarmonyPatch(typeof(GameController), nameof(GameController.buildNotes))]
-            [HarmonyPrefix]
-            public static void PatchCustorTexture(GameController __instance)
-            {
-                CustomNote.ResolvePresets(__instance);
-                CustomNote.ApplyNoteResize(__instance);
-            }
-
-            [HarmonyPatch(typeof(NoteDesigner), nameof(NoteDesigner.setColorScheme))]
-            [HarmonyPrefix]
-            public static bool OverwriteSetColorScheme(NoteDesigner __instance)
-            {
-                if (!Instance.option.OverwriteNoteColor.Value) return true;
-                CustomNote.ApplyColor(__instance);
-
-                return false;
-            }
-
-            [HarmonyPatch(typeof(GameController), nameof(GameController.buildNotes))]
-            [HarmonyPostfix]
-            public static void FixEndNotePosition(GameController __instance)
-            {
-                CustomNote.FixNoteEndPosition(__instance);
-            }
-        }
 
         public class Options
         {
@@ -228,6 +172,7 @@ namespace TootTally.CustomCosmetics
             public ConfigEntry<TrailType> TrailType { get; set; }
 
             public ConfigEntry<string> NoteName { get; set; }
+            public ConfigEntry<string> BonerName { get; set; }
             public ConfigEntry<float> NoteHeadSize { get; set; }
             public ConfigEntry<float> NoteBodySize { get; set; }
             public ConfigEntry<bool> OverwriteNoteColor { get; set; }

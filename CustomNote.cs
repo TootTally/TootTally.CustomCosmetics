@@ -5,7 +5,7 @@ using System.IO;
 using UnityEngine.Networking;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Drawing;
+using HarmonyLib;
 
 namespace TootTally.CustomCosmetics
 {
@@ -157,6 +157,48 @@ namespace TootTally.CustomCosmetics
             {
                 var rect = note.transform.transform.Find("EndPoint").GetComponent<RectTransform>();
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x + 20f, rect.anchoredPosition.y);
+            }
+        }
+
+        public static class CustomNotePatch
+        {
+            [HarmonyPatch(typeof(HomeController), nameof(HomeController.tryToSaveSettings))]
+            [HarmonyPostfix]
+            public static void OnSettingsChange()
+            {
+                ResolvePresets(null);
+            }
+
+            [HarmonyPatch(typeof(HomeController), nameof(HomeController.Start))]
+            [HarmonyPostfix]
+            public static void OnHomeStartLoadTexture()
+            {
+                ResolvePresets(null);
+            }
+
+            [HarmonyPatch(typeof(GameController), nameof(GameController.buildNotes))]
+            [HarmonyPrefix]
+            public static void PatchCustorTexture(GameController __instance)
+            {
+                ResolvePresets(__instance);
+                ApplyNoteResize(__instance);
+            }
+
+            [HarmonyPatch(typeof(NoteDesigner), nameof(NoteDesigner.setColorScheme))]
+            [HarmonyPrefix]
+            public static bool OverwriteSetColorScheme(NoteDesigner __instance)
+            {
+                if (!Plugin.Instance.option.OverwriteNoteColor.Value) return true;
+                ApplyColor(__instance);
+
+                return false;
+            }
+
+            [HarmonyPatch(typeof(GameController), nameof(GameController.buildNotes))]
+            [HarmonyPostfix]
+            public static void FixEndNotePosition(GameController __instance)
+            {
+                FixNoteEndPosition(__instance);
             }
         }
 
