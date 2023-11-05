@@ -125,6 +125,7 @@ namespace TootTally.CustomCosmetics
                 puppetController.head_def = GetMaterial("head_def.mat");
                 puppetController.head_def_es = GetMaterial("head_def_es.mat");
                 puppetController.head_act = GetMaterial("head_act.mat");
+                puppetController.costume_alt = GetMaterial("custom_alt.mat");
                 var mats = puppetController.bodymesh.materials;
                 mats[0] = GetMaterial("body.mat");
                 puppetController.bodymesh.materials = mats;

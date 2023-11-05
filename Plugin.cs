@@ -2,6 +2,7 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -52,7 +53,7 @@ namespace TootTally.CustomCosmetics
         public void LoadModule()
         {
             string configPath = Path.Combine(Paths.BepInExRootPath, "config/");
-            ConfigFile config = new ConfigFile(configPath + CONFIG_NAME, true);
+            ConfigFile config = new ConfigFile(configPath + CONFIG_NAME, true) { SaveOnConfigSet = true };
             option = new Options()
             {
                 CursorName = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.CursorName), DEFAULT_CURSORNAME),
@@ -60,6 +61,7 @@ namespace TootTally.CustomCosmetics
                 NoteName = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteName), DEFAULT_NOTENAME),
                 NoteHeadSize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteHeadSize), 1f),
                 NoteBodySize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteBodySize), 1f),
+                RandomNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.RandomNoteColor), false),
                 OverwriteNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.OverwriteNoteColor), false),
                 NoteColorStart = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorStart), Color.white),
                 NoteColorEnd = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorEnd), Color.black),
@@ -72,6 +74,7 @@ namespace TootTally.CustomCosmetics
 
             TryMigrateFolder("CustomCursors");
             TryMigrateFolder("CustomNotes");
+            TryMigrateFolder("CustomTromboners");
 
             CreateDropdownFromFolder(CURSORS_FOLDER_PATH, option.CursorName, DEFAULT_CURSORNAME);
             CreateDropdownFromFolder(NOTES_FOLDER_PATH, option.NoteName, DEFAULT_NOTENAME);
@@ -85,13 +88,14 @@ namespace TootTally.CustomCosmetics
                 bodySlider.slider.value = 1f;
             });
 
+            SettingPage.AddToggle("RandomNoteColor", option.RandomNoteColor);
             SettingPage.AddToggle("OverwriteNoteColor", option.OverwriteNoteColor, OnToggleValueChange);
             if (option.OverwriteNoteColor.Value) OnToggleValueChange(true);
 
             SettingPage.AddLabel("BonerLabel", "Custom Tromboners", 24, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.BottomLeft);
 
             CustomTromboner.LoadAssetBundles();
-            
+
             List<string> folderNames = new() { Plugin.DEFAULT_BONER };
             folderNames.AddRange(CustomTromboner.GetBonerNames);
             SettingPage.AddDropdown($"BonerDropdown", option.BonerName, folderNames.ToArray());
@@ -145,8 +149,12 @@ namespace TootTally.CustomCosmetics
             var folderPath = Path.Combine(Paths.BepInExRootPath, folderName);
             if (Directory.Exists(folderPath))
             {
-                var directories = Directory.GetDirectories(folderPath);
-                directories.ToList().ForEach(d => folderNames.Add(Path.GetFileNameWithoutExtension(d)));
+                var directories = Directory.GetDirectories(folderPath).ToList();
+                directories.ForEach(d =>
+                {
+                    if (!d.Contains("TEMPALTE"))
+                        folderNames.Add(Path.GetFileNameWithoutExtension(d));
+                });
             }
             SettingPage.AddLabel(folderName, folderName, 24, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.BottomLeft);
             SettingPage.AddDropdown($"{folderName}Dropdown", config, folderNames.ToArray());
@@ -161,11 +169,6 @@ namespace TootTally.CustomCosmetics
             LogInfo($"Module unloaded!");
         }
 
-
-
-
-
-
         public class Options
         {
             public ConfigEntry<string> CursorName { get; set; }
@@ -175,6 +178,7 @@ namespace TootTally.CustomCosmetics
             public ConfigEntry<string> BonerName { get; set; }
             public ConfigEntry<float> NoteHeadSize { get; set; }
             public ConfigEntry<float> NoteBodySize { get; set; }
+            public ConfigEntry<bool> RandomNoteColor { get; set; }
             public ConfigEntry<bool> OverwriteNoteColor { get; set; }
             public ConfigEntry<Color> NoteColorStart { get; set; }
             public ConfigEntry<Color> NoteColorEnd { get; set; }
