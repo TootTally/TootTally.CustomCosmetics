@@ -26,7 +26,6 @@ namespace TootTally.CustomCosmetics
         public const string DEFAULT_NOTENAME = "Default";
         public const string DEFAULT_BONER = "None";
         private const string SETTINGS_PAGE_NAME = "CustomCosmetics";
-        private const TrailType DEFAULT_TRAIL = TrailType.None;
 
         public static string CURSORS_FOLDER_PATH = "CustomCursors";
         public static string NOTES_FOLDER_PATH = "CustomNotes";
@@ -57,14 +56,23 @@ namespace TootTally.CustomCosmetics
             option = new Options()
             {
                 CursorName = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.CursorName), DEFAULT_CURSORNAME),
-                TrailType = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailType), DEFAULT_TRAIL),
+
+                CursorTrail = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.CursorTrail), false),
+                TrailSize = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailSize), .5f),
+                TrailLength = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailLength), .1f),
+                TrailSpeed = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailSpeed), 15f),
+                TrailStartColor = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailStartColor), Color.white),
+                TrailEndColor = config.Bind(CURSOR_CONFIG_FIELD, nameof(option.TrailEndColor), Color.white),
+
                 NoteName = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteName), DEFAULT_NOTENAME),
-                NoteHeadSize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteHeadSize), 1f),
-                NoteBodySize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteBodySize), 1f),
-                RandomNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.RandomNoteColor), false),
-                OverwriteNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.OverwriteNoteColor), false),
+                NoteHeadSize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteHeadSize), 1f, "Size of the start and end note circles"),
+                NoteBodySize = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteBodySize), 1f, "Size of the note line"),
+                RandomNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.RandomNoteColor), false, "Randomize all the colors of the notes"),
+                RGBNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.RGBNoteColor), false, "High notes will be red, Mid will be yellow and low notes will be blue"),
+                OverwriteNoteColor = config.Bind(NOTE_CONFIG_FIELD, nameof(option.OverwriteNoteColor), false, "Make the note color consistent"),
                 NoteColorStart = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorStart), Color.white),
                 NoteColorEnd = config.Bind(NOTE_CONFIG_FIELD, nameof(option.NoteColorEnd), Color.black),
+                
                 BonerName = config.Bind(BONER_CONFIG_FIELD, nameof(option.BonerName), DEFAULT_BONER),
 
             };
@@ -77,6 +85,15 @@ namespace TootTally.CustomCosmetics
             TryMigrateFolder("CustomTromboners");
 
             CreateDropdownFromFolder(CURSORS_FOLDER_PATH, option.CursorName, DEFAULT_CURSORNAME);
+            SettingPage.AddLabel("CustomTrailLabel", "Custom Trail", 24, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.BottomLeft);
+            SettingPage.AddToggle("CursorTrail", option.CursorTrail);
+            SettingPage.AddSlider("Trail Size", 0, 1, option.TrailSize, false);
+            SettingPage.AddSlider("Trail Length", 0, 1, option.TrailLength, false);
+            SettingPage.AddSlider("Trail Speed", 0, 100, option.TrailSpeed, false);
+            SettingPage.AddLabel("Trail Start Color");
+            SettingPage.AddColorSliders("Trail Start Color", "Trail Start Color", option.TrailStartColor);
+            SettingPage.AddLabel("Trail End Color");
+            SettingPage.AddColorSliders("Trail End Color", "Trail End Color", option.TrailEndColor);
             CreateDropdownFromFolder(NOTES_FOLDER_PATH, option.NoteName, DEFAULT_NOTENAME);
 
             var headSlider = SettingPage.AddSlider("NoteHeadSizeSlider", 0f, 5f, 250f, "Note Head Size", option.NoteHeadSize, false);
@@ -89,6 +106,7 @@ namespace TootTally.CustomCosmetics
             });
 
             SettingPage.AddToggle("RandomNoteColor", option.RandomNoteColor);
+            //SettingPage.AddToggle("RGBNoteColor", option.RGBNoteColor);
             SettingPage.AddToggle("OverwriteNoteColor", option.OverwriteNoteColor, OnToggleValueChange);
             if (option.OverwriteNoteColor.Value) OnToggleValueChange(true);
 
@@ -172,23 +190,22 @@ namespace TootTally.CustomCosmetics
         public class Options
         {
             public ConfigEntry<string> CursorName { get; set; }
-            public ConfigEntry<TrailType> TrailType { get; set; }
-
+            public ConfigEntry<bool> CursorTrail { get; set; }
+            public ConfigEntry<float> TrailSize { get; set; }
+            public ConfigEntry<float> TrailLength { get; set; }
+            public ConfigEntry<float> TrailSpeed { get; set; }
+            public ConfigEntry<Color> TrailStartColor { get; set; }
+            public ConfigEntry<Color> TrailEndColor { get; set; }
             public ConfigEntry<string> NoteName { get; set; }
             public ConfigEntry<string> BonerName { get; set; }
             public ConfigEntry<float> NoteHeadSize { get; set; }
             public ConfigEntry<float> NoteBodySize { get; set; }
             public ConfigEntry<bool> RandomNoteColor { get; set; }
+            public ConfigEntry<bool> RGBNoteColor { get; set; }
             public ConfigEntry<bool> OverwriteNoteColor { get; set; }
             public ConfigEntry<Color> NoteColorStart { get; set; }
             public ConfigEntry<Color> NoteColorEnd { get; set; }
         }
 
-        public enum TrailType
-        {
-            None = 0,
-            Short = 1,
-            Long = 2,
-        }
     }
 }

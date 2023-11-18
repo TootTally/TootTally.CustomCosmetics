@@ -153,6 +153,12 @@ namespace TootTally.CustomCosmetics
             col_b2 = (float)_rdm.NextDouble();
         }
 
+        public static Color GetColorFromPosition(float pos)
+        {
+            var normalizedPos = 1f - ((pos + 180f) / 360f);
+            return new Color(1f-normalizedPos, normalizedPos, Math.Abs(2f*normalizedPos - 1f));
+        }
+
         public static void ApplyNoteResize(GameController __instance)
         {
             var startRect = __instance.singlenote.transform.Find("StartPoint").GetComponent<RectTransform>();

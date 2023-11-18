@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.1</TargetFramework>
+		<TargetFramework>net472</TargetFramework>
 		<AssemblyName>TootTally.CustomCosmetics</AssemblyName>
 		<Description>Custom Cosmetic Plugin TootTallyModule</Description>
 		<Version>2.0.1</Version>
@@ -11,14 +11,18 @@
 		<TromboneTootDir>C:\Users\Sabz\AppData\Roaming\r2modmanPlus-local\TromboneChamp\profiles\Default</TromboneTootDir>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <Optimize>True</Optimize>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
 		<PackageReference Include="BepInEx.Core" Version="5.*" />
 		<PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
-		<PackageReference Include="TromboneChamp.GameLibs" Version="1.12.0-beta" />
-		<PackageReference Include="TromboneChamp.BaboonAPI" Version="2.2.0" />
+		<PackageReference Include="TromboneChamp.GameLibs" Version="1.16.0" />
+		<PackageReference Include="TromboneChamp.BaboonAPI" Version="2.5.0" />
 		<PackageReference Include="TromboneChamp.TrombLoader" Version="2.0.0-rc.1" />
-		<PackageReference Include="UnityEngine.Modules" Version="2019.3.11" IncludeAssets="compile" />
+		<PackageReference Include="UnityEngine.Modules" Version="2019.4.40" IncludeAssets="compile" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -28,6 +32,6 @@
 	</ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TromboneTootDir)\BepInEx\plugins\TootTally-CustomCosmetics"/>
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TromboneTootDir)\BepInEx\plugins\TootTally-CustomCosmetics" />
 	</Target>
 </Project>
